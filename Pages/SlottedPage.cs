@@ -1,6 +1,7 @@
 ﻿namespace Pages
 {
     // todo: thinks like record count and available bytes should be held in tables external to the slotted page - this means slotted page isn't responsible for checking size of records being written either
+    // see this vid for info on maintaining tables with available space: https://www.youtube.com/watch?v=Pt_-GT_6ESc&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=5&t=7s
 
     // https://www.youtube.com/watch?v=7OG-bb7iBgI&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=3
     public sealed class SlottedPage
