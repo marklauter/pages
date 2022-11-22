@@ -1,49 +1,6 @@
 ﻿namespace Pages
 {
-    public class RowId
-        : IEquatable<RowId?>
-    {
-        public RowId(int pageId, int slotId)
-        {
-            this.PageId = pageId;
-            this.SlotId = slotId;
-        }
-
-        public int PageId { get; }
-        public int SlotId { get; }
-
-        public override bool Equals(object? obj)
-        {
-            return this.Equals(obj as RowId);
-        }
-
-        public bool Equals(RowId? other)
-        {
-            return other is not null &&
-                   this.PageId.Equals(other.PageId) &&
-                   this.SlotId == other.SlotId;
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(this.PageId, this.SlotId);
-        }
-
-        public override string? ToString()
-        {
-            return $"{this.PageId}/{this.SlotId}";
-        }
-
-        public static bool operator ==(RowId? left, RowId? right)
-        {
-            return EqualityComparer<RowId>.Default.Equals(left, right);
-        }
-
-        public static bool operator !=(RowId? left, RowId? right)
-        {
-            return !(left == right);
-        }
-    }
+    // todo: thinks like record count and available bytes should be held in tables external to the slotted page - this means slotted page isn't responsible for checking size of records being written either
 
     // https://www.youtube.com/watch?v=7OG-bb7iBgI&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=3
     public sealed class SlottedPage
@@ -154,54 +111,70 @@
         public byte[] Read(int slotIndex)
         {
             this.data.Position = this.DirectoryOffset(slotIndex);
-            var offset = this.reader.ReadInt16();
-            return offset != DeletedOffset
-                ? this.ReadInternal(offset)
-                : Array.Empty<byte>();
+            var slot = this.ReadDirectoryEntry(slotIndex);
+            return this.ReadData(slot);
         }
 
-        private byte[] ReadInternal(int offset)
+        private DirectoryEntry ReadDirectoryEntry(int slotIndex)
         {
-            var dataLength = this.reader.ReadInt16();
-            this.data.Position = offset;
-            return this.reader.ReadBytes(dataLength);
+            this.data.Position = this.DirectoryOffset(slotIndex);
+            var offset = this.reader.ReadInt16();
+            var length = this.reader.ReadInt16();
+            return new DirectoryEntry(offset, length);
+        }
+
+        private byte[] ReadData(DirectoryEntry slot)
+        {
+            if (slot.Offset == DeletedOffset)
+            {
+                return Array.Empty<byte>();
+            }
+
+            this.data.Position = slot.Offset;
+            return this.reader.ReadBytes(slot.Length);
         }
 
         // see https://www.youtube.com/watch?v=TeWuLyHYsTQ&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=4
-        public RowId Write(byte[] buffer)
+        public RowId Write(byte[] record)
         {
-            if (buffer is null)
+            if (record is null)
             {
-                throw new ArgumentNullException(nameof(buffer));
+                throw new ArgumentNullException(nameof(record));
             }
 
-            if (buffer.Length + DirectorySlotSize > this.availableBytes)
+            if (record.Length + DirectorySlotSize > this.availableBytes)
             {
-                throw new BufferTooLargeException($"Page Id {this.id} is out of space.");
+                throw new BufferTooLargeException($"Page Id {this.id} can't fit {nameof(record)} with length {record.Length}. Space available {this.availableBytes}.");
             }
 
             var slotIndex = this.recordCount;
-            var previousDataOffset = (short)HeaderSize;
-            var previousDataLength = (short)0;
-            if (slotIndex > 0)
-            {
-                this.data.Position = this.DirectoryOffset(slotIndex - 1);
-                previousDataOffset = this.reader.ReadInt16();
-                previousDataLength = this.reader.ReadInt16();
-            }
+            var previousDirectoryEntry = (slotIndex > 0)
+                ? this.ReadDirectoryEntry(slotIndex - 1)
+                : new DirectoryEntry(HeaderSize, 0);
 
-            var nextOffset = (short)(previousDataOffset + previousDataLength);
-            this.data.Position = this.DirectoryOffset(slotIndex);
-            this.writer.Write(nextOffset);
-            this.writer.Write((short)buffer.Length);
+            var newDirectoryEntry = new DirectoryEntry(
+                (short)(previousDirectoryEntry.Offset + previousDirectoryEntry.Length),
+                (short)record.Length);
+            this.WriteDirectoryEntry(slotIndex, newDirectoryEntry);
+            this.WriteData(record, newDirectoryEntry);
 
-            this.data.Position = nextOffset;
-            this.writer.Write(buffer);
-
-            this.AvailableBytes = (short)(this.availableBytes - (buffer.Length + DirectorySlotSize));
+            this.AvailableBytes = (short)(this.availableBytes - (record.Length + DirectorySlotSize));
             this.RecordCount += 1;
 
             return new RowId(this.Id, slotIndex);
+        }
+
+        private void WriteDirectoryEntry(int slotIndex, DirectoryEntry directoryEntry)
+        {
+            this.data.Position = this.DirectoryOffset(slotIndex);
+            this.writer.Write(directoryEntry.Offset);
+            this.writer.Write(directoryEntry.Length);
+        }
+
+        private void WriteData(byte[] record, DirectoryEntry directoryEntry)
+        {
+            this.data.Position = directoryEntry.Offset;
+            this.writer.Write(record);
         }
 
         public void Delete(int slotIndex)
