@@ -94,6 +94,7 @@ namespace Pages.Tests
             _ = page.Write(buffer);
             _ = page.Write(buffer);
             Assert.Equal(3, page.RecordCount);
+            Assert.True(page.AvailableBytes < buffer.Length);
 
             // throws
             var exception = Assert.Throws<BufferTooLargeException>(() => _ = page.Write(buffer));
