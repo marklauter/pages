@@ -24,7 +24,7 @@
             private set
             {
                 this.id = value;
-                this.data.Position = 0;
+                _ = this.data.Seek(0, SeekOrigin.Begin);
                 this.writer.Write(this.id);
             }
         }
@@ -36,26 +36,32 @@
             private set
             {
                 this.recordCount = value;
-                this.data.Position = sizeof(short);
+                _ = this.data.Seek(sizeof(short), SeekOrigin.Begin);
                 this.writer.Write(this.recordCount);
             }
         }
 
-        private short availableBytes;
-        public short AvailableBytes
+        private short bytesAvailable;
+        public short AvailableSpace
         {
-            get => this.availableBytes;
+            get => this.bytesAvailable;
             private set
             {
-                this.availableBytes = value;
-                this.data.Position = sizeof(short) * 2;
-                this.writer.Write(this.availableBytes);
+                this.bytesAvailable = value;
+                _ = this.data.Seek(sizeof(short) * 2, SeekOrigin.Begin);
+                this.writer.Write(this.bytesAvailable);
             }
         }
 
-        public static MemoryStreamPage FromStream(Stream stream)
+        /// <summary>
+        /// Loads the page from a source stream.
+        /// </summary>
+        /// <param name="stream">source stream</param>
+        /// <param name="pageOffset">location of the page in the source stream</param>
+        /// <returns><See ecref="MemoryStreamPage"></returns>
+        public static MemoryStreamPage FromStream(Stream stream, long pageOffset)
         {
-            return new MemoryStreamPage(stream);
+            return new MemoryStreamPage(stream, pageOffset);
         }
 
         public static MemoryStreamPage New(int id)
@@ -65,7 +71,7 @@
 
         public IPage Clone()
         {
-            return new MemoryStreamPage(this.data);
+            return new MemoryStreamPage(this.data, 0L);
         }
 
         private MemoryStreamPage()
@@ -73,11 +79,11 @@
             this.data = new(PageSize);
             this.reader = new BinaryReader(this.data, System.Text.Encoding.UTF8, true);
             this.writer = new BinaryWriter(this.data, System.Text.Encoding.UTF8, true);
-            this.availableBytes = PageSize - HeaderSize;
+            this.bytesAvailable = PageSize - HeaderSize;
             this.recordCount = 0;
         }
 
-        private MemoryStreamPage(Stream stream)
+        private MemoryStreamPage(Stream stream, long pageOffset)
             : this()
         {
             if (stream is null)
@@ -85,17 +91,20 @@
                 throw new ArgumentNullException(nameof(stream));
             }
 
-            if (stream.Length != PageSize)
+            if (stream.Length != pageOffset + PageSize)
             {
                 throw new ArgumentException("page size mismatch");
             }
 
-            stream.Position = 0;
-            stream.CopyTo(this.data);
-            this.data.Position = 0;
+            _ = stream.Seek(pageOffset, SeekOrigin.Begin);
+            var buffer = new Span<byte>(new byte[PageSize]);
+            stream.ReadExactly(buffer);
+            _ = this.data.Seek(0, SeekOrigin.Begin);
+            this.data.Write(buffer);
+
             this.id = this.reader.ReadInt32();
             this.recordCount = this.reader.ReadInt16();
-            this.availableBytes = this.reader.ReadInt16();
+            this.bytesAvailable = this.reader.ReadInt16();
         }
 
         private MemoryStreamPage(int id)
@@ -138,9 +147,9 @@
                 throw new ArgumentNullException(nameof(record));
             }
 
-            if (record.Length + DirectorySlotSize > this.availableBytes)
+            if (record.Length + DirectorySlotSize > this.bytesAvailable)
             {
-                throw new BufferTooLargeException($"Page Id {this.id} can't fit {nameof(record)} with length {record.Length}. Space available {this.availableBytes}.");
+                throw new BufferTooLargeException($"Page Id {this.id} can't fit {nameof(record)} with length {record.Length}. Space available {this.bytesAvailable}.");
             }
 
             var slotIndex = this.recordCount;
@@ -154,7 +163,7 @@
             this.WriteDirectoryEntry(slotIndex, newDirectoryEntry);
             this.WriteData(record, newDirectoryEntry);
 
-            this.AvailableBytes = (short)(this.availableBytes - (record.Length + DirectorySlotSize));
+            this.AvailableSpace = (short)(this.bytesAvailable - (record.Length + DirectorySlotSize));
             this.RecordCount += 1;
 
             return new RowId(this.Id, slotIndex);
@@ -208,6 +217,25 @@
         public void Dispose()
         {
             this.Dispose(disposing: true);
+        }
+
+        public void WriteTo(Stream stream, long pageOffset)
+        {
+            if (stream is null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            var buffer = new Span<byte>(new byte[PageSize]);
+            _ = this.data.Seek(0, SeekOrigin.Begin);
+            this.data.ReadExactly(buffer);
+
+            _ = stream.Seek(pageOffset, SeekOrigin.Begin);
+            stream.Write(buffer);
+
+            this.id = this.reader.ReadInt32();
+            this.recordCount = this.reader.ReadInt16();
+            this.bytesAvailable = this.reader.ReadInt16();
         }
     }
 }

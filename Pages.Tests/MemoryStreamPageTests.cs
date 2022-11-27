@@ -8,7 +8,7 @@ namespace Pages.Tests
             using var page = MemoryStreamPage.New(1);
             Assert.Equal(1, page.Id);
             Assert.Equal(0, page.RecordCount);
-            Assert.Equal(MemoryStreamPage.PageSize - MemoryStreamPage.HeaderSize, page.AvailableBytes);
+            Assert.Equal(MemoryStreamPage.PageSize - MemoryStreamPage.HeaderSize, page.AvailableSpace);
         }
 
         [Fact]
@@ -37,10 +37,10 @@ namespace Pages.Tests
             Assert.Equal(0, page.RecordCount);
 
             var rowId = page.Write(abc);
-            Assert.Equal(MemoryStreamPage.PageSize - (MemoryStreamPage.HeaderSize + abc.Length + MemoryStreamPage.DirectorySlotSize), page.AvailableBytes);
+            Assert.Equal(MemoryStreamPage.PageSize - (MemoryStreamPage.HeaderSize + abc.Length + MemoryStreamPage.DirectorySlotSize), page.AvailableSpace);
 
             rowId = page.Write(abc);
-            Assert.Equal(MemoryStreamPage.PageSize - (MemoryStreamPage.HeaderSize + 2 * (abc.Length + MemoryStreamPage.DirectorySlotSize)), page.AvailableBytes);
+            Assert.Equal(MemoryStreamPage.PageSize - (MemoryStreamPage.HeaderSize + 2 * (abc.Length + MemoryStreamPage.DirectorySlotSize)), page.AvailableSpace);
         }
 
         [Fact]
@@ -94,7 +94,7 @@ namespace Pages.Tests
             _ = page.Write(buffer);
             _ = page.Write(buffer);
             Assert.Equal(3, page.RecordCount);
-            Assert.True(page.AvailableBytes < buffer.Length);
+            Assert.True(page.AvailableSpace < buffer.Length);
 
             var exception = Assert.Throws<BufferTooLargeException>(() => _ = page.Write(buffer));
             Assert.Contains($"{page.Id}", exception.Message);
