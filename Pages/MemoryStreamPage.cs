@@ -4,8 +4,8 @@
     // see this vid for info on maintaining tables with available space: https://www.youtube.com/watch?v=Pt_-GT_6ESc&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=5&t=7s
 
     // https://www.youtube.com/watch?v=7OG-bb7iBgI&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=3
-    public sealed class SlottedPage
-        : IDisposable
+    public sealed class MemoryStreamPage
+        : IDisposable, IPage
     {
         public const int DirectorySlotSize = sizeof(short) * 2; // two int16 and 1 byte denoting forward reference
         public const int HeaderSize = sizeof(short) * 2 + sizeof(int);
@@ -53,22 +53,22 @@
             }
         }
 
-        public static SlottedPage FromStream(Stream stream)
+        public static MemoryStreamPage FromStream(Stream stream)
         {
-            return new SlottedPage(stream);
+            return new MemoryStreamPage(stream);
         }
 
-        public static SlottedPage New(int id)
+        public static MemoryStreamPage New(int id)
         {
-            return new SlottedPage(id);
+            return new MemoryStreamPage(id);
         }
 
-        public SlottedPage Clone()
+        public IPage Clone()
         {
-            return new SlottedPage(this);
+            return new MemoryStreamPage(this);
         }
 
-        private SlottedPage()
+        private MemoryStreamPage()
         {
             this.data = new(PageSize);
             this.reader = new BinaryReader(this.data, System.Text.Encoding.UTF8, true);
@@ -77,12 +77,12 @@
             this.recordCount = 0;
         }
 
-        private SlottedPage(SlottedPage sourcePage)
+        private MemoryStreamPage(MemoryStreamPage sourcePage)
             : this(sourcePage?.data ?? throw new ArgumentNullException(nameof(sourcePage)))
         {
         }
 
-        private SlottedPage(Stream stream)
+        private MemoryStreamPage(Stream stream)
             : this()
         {
             if (stream is null)
@@ -103,7 +103,7 @@
             this.availableBytes = this.reader.ReadInt16();
         }
 
-        private SlottedPage(int id)
+        private MemoryStreamPage(int id)
             : this()
         {
             this.Id = id;
@@ -111,14 +111,14 @@
 
         public byte[] Read(int slotIndex)
         {
-            this.data.Position = this.DirectoryOffset(slotIndex);
+            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
             var slot = this.ReadDirectoryEntry(slotIndex);
             return this.ReadData(slot);
         }
 
         private DirectoryEntry ReadDirectoryEntry(int slotIndex)
         {
-            this.data.Position = this.DirectoryOffset(slotIndex);
+            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
             var offset = this.reader.ReadInt16();
             var length = this.reader.ReadInt16();
             return new DirectoryEntry(offset, length);
@@ -154,7 +154,7 @@
                 : new DirectoryEntry(HeaderSize, 0);
 
             var newDirectoryEntry = new DirectoryEntry(
-                (short)(previousDirectoryEntry.Offset + previousDirectoryEntry.Length),
+                this.CalculateNextDataOffset(previousDirectoryEntry),
                 (short)record.Length);
             this.WriteDirectoryEntry(slotIndex, newDirectoryEntry);
             this.WriteData(record, newDirectoryEntry);
@@ -167,7 +167,7 @@
 
         private void WriteDirectoryEntry(int slotIndex, DirectoryEntry directoryEntry)
         {
-            this.data.Position = this.DirectoryOffset(slotIndex);
+            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
             this.writer.Write(directoryEntry.Offset);
             this.writer.Write(directoryEntry.Length);
         }
@@ -180,13 +180,19 @@
 
         public void Delete(int slotIndex)
         {
-            this.data.Position = this.DirectoryOffset(slotIndex);
+            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
             this.writer.Write(DeletedOffset);
         }
 
-        private int DirectoryOffset(int slotIndex)
+        private int CalculateDirectoryOffset(int slotIndex)
         {
+            // offset from end / tail of page
             return PageSize - DirectorySlotSize * (slotIndex + 1);
+        }
+
+        private short CalculateNextDataOffset(DirectoryEntry directoryEntry)
+        {
+            return (short)(directoryEntry.Offset + directoryEntry.Length);
         }
 
         private void Dispose(bool disposing)

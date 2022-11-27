@@ -1,21 +1,21 @@
 namespace Pages.Tests
 {
-    public class SlottedPageTests
+    public class MemoryStreamPageTests
     {
         [Fact]
         public void NewCreatesEmptyPage()
         {
-            using var page = SlottedPage.New(1);
+            using var page = MemoryStreamPage.New(1);
             Assert.Equal(1, page.Id);
             Assert.Equal(0, page.RecordCount);
-            Assert.Equal(SlottedPage.PageSize - SlottedPage.HeaderSize, page.AvailableBytes);
+            Assert.Equal(MemoryStreamPage.PageSize - MemoryStreamPage.HeaderSize, page.AvailableBytes);
         }
 
         [Fact]
         public void WriteIncreasesCount()
         {
             var abc = System.Text.Encoding.UTF8.GetBytes("abc");
-            using var page = SlottedPage.New(1);
+            using var page = MemoryStreamPage.New(1);
             Assert.Equal(0, page.RecordCount);
 
             var rowId = page.Write(abc);
@@ -33,21 +33,21 @@ namespace Pages.Tests
         public void WriteDecreasesAvailableBytes()
         {
             var abc = System.Text.Encoding.UTF8.GetBytes("abc");
-            using var page = SlottedPage.New(1);
+            using var page = MemoryStreamPage.New(1);
             Assert.Equal(0, page.RecordCount);
 
             var rowId = page.Write(abc);
-            Assert.Equal(SlottedPage.PageSize - (SlottedPage.HeaderSize + abc.Length + SlottedPage.DirectorySlotSize), page.AvailableBytes);
+            Assert.Equal(MemoryStreamPage.PageSize - (MemoryStreamPage.HeaderSize + abc.Length + MemoryStreamPage.DirectorySlotSize), page.AvailableBytes);
 
             rowId = page.Write(abc);
-            Assert.Equal(SlottedPage.PageSize - (SlottedPage.HeaderSize + 2 * (abc.Length + SlottedPage.DirectorySlotSize)), page.AvailableBytes);
+            Assert.Equal(MemoryStreamPage.PageSize - (MemoryStreamPage.HeaderSize + 2 * (abc.Length + MemoryStreamPage.DirectorySlotSize)), page.AvailableBytes);
         }
 
         [Fact]
         public void ReadRetrievesCorrectData()
         {
             var expectedAbc = System.Text.Encoding.UTF8.GetBytes("abc");
-            using var page = SlottedPage.New(1);
+            using var page = MemoryStreamPage.New(1);
             Assert.Equal(0, page.RecordCount);
 
             var rowId = page.Write(expectedAbc);
@@ -65,7 +65,7 @@ namespace Pages.Tests
                 System.Text.Encoding.UTF8.GetBytes("hij"),
             };
 
-            using var page = SlottedPage.New(1);
+            using var page = MemoryStreamPage.New(1);
             Assert.Equal(0, page.RecordCount);
 
             var rowIds = new List<RowId>();
@@ -86,7 +86,7 @@ namespace Pages.Tests
         [Fact]
         public void WriteMultipleEventuallyFillsPageAndThrowsBufferTooLargeException()
         {
-            using var page = SlottedPage.New(1);
+            using var page = MemoryStreamPage.New(1);
             Assert.Equal(0, page.RecordCount);
 
             var buffer = new byte[1024];
