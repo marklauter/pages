@@ -5,7 +5,7 @@
 
     // https://www.youtube.com/watch?v=7OG-bb7iBgI&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=3
     public sealed class MemoryStreamPage
-        : IDisposable, IPage
+        : IPage
     {
         public const int DirectorySlotSize = sizeof(short) * 2; // two int16 and 1 byte denoting forward reference
         public const int HeaderSize = sizeof(short) * 2 + sizeof(int);
@@ -65,7 +65,7 @@
 
         public IPage Clone()
         {
-            return new MemoryStreamPage(this);
+            return new MemoryStreamPage(this.data);
         }
 
         private MemoryStreamPage()
@@ -75,11 +75,6 @@
             this.writer = new BinaryWriter(this.data, System.Text.Encoding.UTF8, true);
             this.availableBytes = PageSize - HeaderSize;
             this.recordCount = 0;
-        }
-
-        private MemoryStreamPage(MemoryStreamPage sourcePage)
-            : this(sourcePage?.data ?? throw new ArgumentNullException(nameof(sourcePage)))
-        {
         }
 
         private MemoryStreamPage(Stream stream)

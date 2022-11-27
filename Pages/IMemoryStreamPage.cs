@@ -1,6 +1,7 @@
 ﻿namespace Pages
 {
     public interface IPage
+        : IDisposable
     {
         short AvailableBytes { get; }
         int Id { get; }
