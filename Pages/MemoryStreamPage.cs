@@ -86,10 +86,7 @@
         private MemoryStreamPage(Stream stream, long pageOffset)
             : this()
         {
-            if (stream is null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
+            ArgumentNullException.ThrowIfNull(stream);
 
             if (stream.Length != pageOffset + PageSize)
             {
@@ -115,14 +112,14 @@
 
         public byte[] Read(int slotIndex)
         {
-            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
+            this.data.Position = CalculateDirectoryOffset(slotIndex);
             var slot = this.ReadDirectoryEntry(slotIndex);
             return this.ReadData(slot);
         }
 
         private DirectoryEntry ReadDirectoryEntry(int slotIndex)
         {
-            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
+            this.data.Position = CalculateDirectoryOffset(slotIndex);
             var offset = this.reader.ReadInt16();
             var length = this.reader.ReadInt16();
             return new DirectoryEntry(offset, length);
@@ -142,10 +139,7 @@
         // see https://www.youtube.com/watch?v=TeWuLyHYsTQ&list=PLC4UZxBVGKtf2MR6IXMU79HMOtHIdnIEF&index=4
         public RowId Write(byte[] record)
         {
-            if (record is null)
-            {
-                throw new ArgumentNullException(nameof(record));
-            }
+            ArgumentNullException.ThrowIfNull(record);
 
             if (record.Length + DirectorySlotSize > this.bytesAvailable)
             {
@@ -158,7 +152,7 @@
                 : new DirectoryEntry(HeaderSize, 0);
 
             var newDirectoryEntry = new DirectoryEntry(
-                this.CalculateNextDataOffset(previousDirectoryEntry),
+                CalculateNextDataOffset(previousDirectoryEntry),
                 (short)record.Length);
             this.WriteDirectoryEntry(slotIndex, newDirectoryEntry);
             this.WriteData(record, newDirectoryEntry);
@@ -171,7 +165,7 @@
 
         private void WriteDirectoryEntry(int slotIndex, DirectoryEntry directoryEntry)
         {
-            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
+            this.data.Position = CalculateDirectoryOffset(slotIndex);
             this.writer.Write(directoryEntry.Offset);
             this.writer.Write(directoryEntry.Length);
         }
@@ -184,17 +178,17 @@
 
         public void Delete(int slotIndex)
         {
-            this.data.Position = this.CalculateDirectoryOffset(slotIndex);
+            this.data.Position = CalculateDirectoryOffset(slotIndex);
             this.writer.Write(DeletedOffset);
         }
 
-        private int CalculateDirectoryOffset(int slotIndex)
+        private static int CalculateDirectoryOffset(int slotIndex)
         {
             // offset from end / tail of page
             return PageSize - DirectorySlotSize * (slotIndex + 1);
         }
 
-        private short CalculateNextDataOffset(DirectoryEntry directoryEntry)
+        private static short CalculateNextDataOffset(DirectoryEntry directoryEntry)
         {
             return (short)(directoryEntry.Offset + directoryEntry.Length);
         }
@@ -221,10 +215,7 @@
 
         public void WriteTo(Stream stream, long pageOffset)
         {
-            if (stream is null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
+            ArgumentNullException.ThrowIfNull(stream);
 
             var buffer = new Span<byte>(new byte[PageSize]);
             _ = this.data.Seek(0, SeekOrigin.Begin);

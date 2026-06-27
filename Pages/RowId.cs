@@ -1,6 +1,6 @@
 ﻿namespace Pages
 {
-    public class RowId
+    public sealed class RowId
         : IEquatable<RowId?>
     {
         public RowId(int pageId, int slotId)

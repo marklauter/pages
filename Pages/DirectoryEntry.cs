@@ -8,7 +8,7 @@
             this.Length = length;
         }
 
-        public readonly short Offset;
-        public readonly short Length;
+        public short Offset { get; }
+        public short Length { get; }
     }
 }

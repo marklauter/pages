@@ -1,0 +1,22 @@
+<Project>
+
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Test infrastructure -->
+		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+		<PackageVersion Include="xunit" Version="2.9.3" />
+		<PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
+		<PackageVersion Include="coverlet.collector" Version="10.0.1" />
+		<PackageVersion Include="TngTech.ArchUnitNET" Version="0.13.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<GlobalPackageReference Include="IDisposableAnalyzers" Version="4.0.8" />
+		<GlobalPackageReference Include="Puma.Security.Rules" Version="2.4.11" />
+	</ItemGroup>
+
+</Project>

@@ -97,7 +97,7 @@ namespace Pages.Tests
             Assert.True(page.AvailableSpace < buffer.Length);
 
             var exception = Assert.Throws<BufferTooLargeException>(() => _ = page.Write(buffer));
-            Assert.Contains($"{page.Id}", exception.Message);
+            Assert.Contains($"{page.Id}", exception.Message, StringComparison.Ordinal);
         }
     }
 }
