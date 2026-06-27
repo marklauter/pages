@@ -1,18 +1,17 @@
-﻿namespace Pages
+﻿namespace Pages;
+
+public sealed class BufferTooLargeException
+    : Exception
 {
-    public sealed class BufferTooLargeException
-        : Exception
+    public BufferTooLargeException()
     {
-        public BufferTooLargeException()
-        {
-        }
+    }
 
-        public BufferTooLargeException(string? message) : base(message)
-        {
-        }
+    public BufferTooLargeException(string? message) : base(message)
+    {
+    }
 
-        public BufferTooLargeException(string? message, Exception? innerException) : base(message, innerException)
-        {
-        }
+    public BufferTooLargeException(string? message, Exception? innerException) : base(message, innerException)
+    {
     }
 }
