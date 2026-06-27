@@ -1,24 +1,17 @@
-﻿using System.Runtime.Serialization;
+﻿namespace Pages;
 
-namespace Pages
+public sealed class BufferTooLargeException
+    : Exception
 {
-    public class BufferTooLargeException
-        : Exception
+    public BufferTooLargeException()
     {
-        public BufferTooLargeException()
-        {
-        }
+    }
 
-        public BufferTooLargeException(string? message) : base(message)
-        {
-        }
+    public BufferTooLargeException(string? message) : base(message)
+    {
+    }
 
-        public BufferTooLargeException(string? message, Exception? innerException) : base(message, innerException)
-        {
-        }
-
-        protected BufferTooLargeException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
+    public BufferTooLargeException(string? message, Exception? innerException) : base(message, innerException)
+    {
     }
 }
