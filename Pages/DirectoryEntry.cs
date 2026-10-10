@@ -1,14 +1,7 @@
-﻿namespace Pages
-{
-    internal readonly struct DirectoryEntry
-    {
-        public DirectoryEntry(short offset, short length)
-        {
-            this.Offset = offset;
-            this.Length = length;
-        }
+﻿namespace Pages;
 
-        public readonly short Offset;
-        public readonly short Length;
-    }
+internal readonly struct DirectoryEntry(short offset, short length)
+{
+    public short Offset { get; } = offset;
+    public short Length { get; } = length;
 }

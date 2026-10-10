@@ -1,47 +1,22 @@
-﻿namespace Pages
+﻿namespace Pages;
+
+public sealed class RowId(int pageId, int slotId)
+            : IEquatable<RowId?>
 {
-    public class RowId
-        : IEquatable<RowId?>
-    {
-        public RowId(int pageId, int slotId)
-        {
-            this.PageId = pageId;
-            this.SlotId = slotId;
-        }
+    public int PageId { get; } = pageId;
+    public int SlotId { get; } = slotId;
 
-        public int PageId { get; }
-        public int SlotId { get; }
+    public override bool Equals(object? obj) => Equals(obj as RowId);
 
-        public override bool Equals(object? obj)
-        {
-            return this.Equals(obj as RowId);
-        }
+    public bool Equals(RowId? other) => other is not null &&
+               PageId.Equals(other.PageId) &&
+               SlotId == other.SlotId;
 
-        public bool Equals(RowId? other)
-        {
-            return other is not null &&
-                   this.PageId.Equals(other.PageId) &&
-                   this.SlotId == other.SlotId;
-        }
+    public override int GetHashCode() => HashCode.Combine(PageId, SlotId);
 
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(this.PageId, this.SlotId);
-        }
+    public override string? ToString() => $"{PageId}/{SlotId}";
 
-        public override string? ToString()
-        {
-            return $"{this.PageId}/{this.SlotId}";
-        }
+    public static bool operator ==(RowId? left, RowId? right) => EqualityComparer<RowId>.Default.Equals(left, right);
 
-        public static bool operator ==(RowId? left, RowId? right)
-        {
-            return EqualityComparer<RowId>.Default.Equals(left, right);
-        }
-
-        public static bool operator !=(RowId? left, RowId? right)
-        {
-            return !(left == right);
-        }
-    }
+    public static bool operator !=(RowId? left, RowId? right) => !(left == right);
 }
